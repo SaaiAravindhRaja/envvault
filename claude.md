@@ -8,12 +8,12 @@ EnvVault is a zero-knowledge secrets management platform. The server never sees 
 
 ## Tech Stack
 
-- **Web**: Next.js 15, Tailwind CSS, shadcn/ui
+- **Web**: Next.js 15, Tailwind CSS
 - **API**: Hono.js on Cloudflare Workers
-- **CLI**: Rust (future)
+- **CLI**: TypeScript (commander.js)
+- **MCP Server**: Model Context Protocol for AI agents
 - **Database**: Cloudflare D1 (SQLite)
-- **Encryption**: AES-256-GCM with Argon2id key derivation
-- **Auth**: Better Auth (GitHub, Google OAuth)
+- **Encryption**: AES-256-GCM with PBKDF2 key derivation
 
 ## Architecture
 
@@ -21,125 +21,85 @@ EnvVault is a zero-knowledge secrets management platform. The server never sees 
 envvault/
 ├── apps/
 │   ├── web/          # Next.js dashboard
-│   └── api/          # Hono.js API
+│   ├── api/          # Hono.js API
+│   ├── cli/          # Command-line tool
+│   └── mcp/          # MCP server for AI agents
 ├── packages/
 │   ├── crypto/       # Zero-knowledge encryption
-│   ├── sdk/          # TypeScript SDK
 │   └── shared/       # Shared types
 └── turbo.json        # Monorepo config
 ```
 
 ## Zero-Knowledge Encryption Flow
 
-1. User creates account, enters master password
-2. Master password → Argon2id → encryption key (never sent to server)
-3. Key stored in browser localStorage (encrypted with device key)
-4. Secrets encrypted with AES-256-GCM before leaving client
-5. Server stores only ciphertext + nonce
-6. Decryption happens entirely in browser/CLI
-
-## Data Model
-
-```
-Organization → Workspaces → Environments → Secrets
-```
-
-- **Organization**: Team/company container
-- **Workspace**: Project (e.g., "backend-api")
-- **Environment**: dev, staging, production
-- **Secret**: key-value pair (value always encrypted)
+1. User enters master password
+2. Password → PBKDF2 → encryption key (NEVER sent to server)
+3. Secrets encrypted with AES-256-GCM before leaving client
+4. Server stores only ciphertext + nonce
+5. Decryption happens entirely in browser/CLI
 
 ## Key Commands
 
 ```bash
 # Development
+pnpm install          # Install all dependencies
 pnpm dev              # Start all apps
 pnpm build            # Build all apps
-pnpm lint             # Lint all apps
 
-# Web app
-pnpm --filter web dev
+# CLI
+envvault login        # Authenticate
+envvault pull dev     # Pull secrets
+envvault run -- npm start  # Run with secrets
 
-# API
-pnpm --filter api dev
+# MCP Server (for AI agents)
+envvault-mcp --workspace my-app --env production
 ```
+
+## Implementation Status
+
+### Completed
+- [x] Turborepo monorepo setup
+- [x] Landing page with features/pricing
+- [x] Login page with master password
+- [x] Dashboard with real encryption
+- [x] Secret health dashboard
+- [x] QR code instant sharing
+- [x] Receive page for shared secrets
+- [x] API server with all routes
+- [x] Database schema
+- [x] Zero-knowledge crypto library
+- [x] CLI tool with all commands
+- [x] MCP server for AI agents
+
+### Unique Features (vs Infisical)
+1. **MCP Server** - AI agents can access secrets safely
+2. **Zero-knowledge by default** - Not optional like competitors
+3. **QR code sharing** - Instant visual sharing
+4. **Health dashboard** - Gamified rotation reminders
+5. **Workspace pricing** - $10/workspace vs $18/identity
 
 ## Commit Guidelines
 
-- Use conventional commits: feat:, fix:, docs:, refactor:
+- Use conventional commits: feat:, fix:, docs:
 - Keep commits focused and atomic
-- No AI-generated commit messages
+- No AI-generated messages or co-authors
 
 ## Security Principles
 
 1. Zero-knowledge: Server cannot decrypt secrets
-2. Key derivation: Argon2id with high memory cost
-3. Encryption: AES-256-GCM (authenticated encryption)
-4. No plaintext: Even key names are hashed for storage
-5. Audit everything: Log all access attempts
+2. Key derivation: PBKDF2 with 100k iterations
+3. Encryption: AES-256-GCM (authenticated)
+4. Hashing: SHA-256 for key indexing
+5. Audit: Log all access attempts
 
-## API Endpoints (Planned)
+## Interview Talking Points
 
-```
-POST   /auth/login
-POST   /auth/register
-GET    /orgs
-POST   /orgs
-GET    /orgs/:id/workspaces
-POST   /orgs/:id/workspaces
-GET    /workspaces/:id/environments
-POST   /workspaces/:id/environments
-GET    /environments/:id/secrets
-POST   /environments/:id/secrets
-PUT    /secrets/:id
-DELETE /secrets/:id
-```
+**Problem**: "Every dev team shares secrets over WhatsApp. It's a security nightmare."
 
-## Environment Variables
+**Solution**: "Built a secrets manager with true zero-knowledge encryption. The server literally cannot read your secrets."
 
-```bash
-# API
-DATABASE_URL=          # Cloudflare D1 connection
-JWT_SECRET=            # For auth tokens
+**Technical Challenge**: "Key management was hardest - implemented PBKDF2 derivation, AES-256-GCM encryption, and made it work across browser and CLI."
 
-# Web
-NEXT_PUBLIC_API_URL=   # API endpoint
-```
+**Unique Feature**: "Built an MCP server so AI agents like Claude can access secrets with scoped permissions and full audit logging. No competitor has this."
 
-## Testing
-
-- Unit tests: Vitest
-- E2E tests: Playwright
-- Crypto tests: 100% coverage required
-
-## Deployment
-
-- Web: Cloudflare Pages
-- API: Cloudflare Workers
-- Database: Cloudflare D1
-
-## Current Implementation Status
-
-### Completed
-- [x] Monorepo setup with Turborepo + pnpm
-- [x] Web dashboard with landing page (Next.js 15)
-- [x] API server scaffolding (Hono.js)
-- [x] Zero-knowledge crypto library (AES-256-GCM, PBKDF2)
-- [x] Shared types package
-- [x] Database schema (D1)
-
-### Next Steps
-1. Wire up authentication (Better Auth or custom magic links)
-2. Connect web dashboard to API
-3. Implement actual secret CRUD with encryption
-4. Add CLI tool (Rust)
-5. CI/CD pipeline
-6. Deploy to Cloudflare
-
-## Competitive Advantages vs Infisical
-
-1. **Zero-knowledge by default** - Their encryption is optional
-2. **Free SSO** - They charge $18/user for SSO
-3. **Workspace pricing** - $10/workspace vs $18/identity
-4. **Local-first** - Works offline (planned)
-5. **AI agent support** - MCP server integration (planned)
+**Scale**: "Edge-deployed on Cloudflare Workers. < 50ms latency globally."
